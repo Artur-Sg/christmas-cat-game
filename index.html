@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Christas Cat Game</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+
+        .background-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: url('./assets/window.png') no-repeat center center;
+            background-size: cover;
+        }
+
+        canvas {
+            z-index: -1;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 45vw;
+            height: 75vh;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://unpkg.com/magic-snowflakes/dist/snowflakes.min.js"></script>
+    <div class="background-container"></div>
+    <div id="snowflakes-container"></div>
+    <script type="text/javascript">
+        new Snowflakes({
+            color: 'white', // Default: "#5ECDEF"
+            count: 150, // 100 snowflakes. Default: 50
+            minOpacity: 0.1, // From 0 to 1. Default: 0.6
+            maxOpacity: 0.95, // From 0 to 1. Default: 1
+            minSize: 15, // Default: 10
+            maxSize: 35, // Default: 25
+            rotation: true, // Default: true
+            speed: 1, // The property affects the speed of falling. Default: 1
+            wind: true, // Without wind. Default: true
+            zIndex: 100, // Default: 9999,
+            autoResize: true // Default: true
+        });
+    </script>
+    <script type="text/javascript">
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 300 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+        let meow;
+        let background;
+        let player;
+
+        function preload() {
+            this.load.image('sky', 'assets/sky.png');
+            this.load.image('ground', 'assets/platform.png');
+            this.load.image('star', 'assets/star.png');
+            this.load.image('bomb', 'assets/bomb.png');
+            this.load.spritesheet('dude',
+                'assets/Run.png',
+                { frameWidth: 32, frameHeight: 32 },
+            );
+            this.load.audio('meow', "assets/meow.mp3");
+            this.load.audio('background', "assets/background.mp3");
+        }
+
+        function create() {
+            cursors = this.input.keyboard.createCursorKeys();
+
+            this.add.image(400, 300, 'sky');
+
+            platforms = this.physics.add.staticGroup();
+
+            platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+
+            platforms.create(600, 400, 'ground');
+            platforms.create(50, 250, 'ground');
+            platforms.create(750, 220, 'ground');
+
+            player = this.physics.add.sprite(100, 450, 'dude');
+
+            meow = this.sound.add('meow', { volume: 0.5, rate: 1.25 });
+
+            player.setBounce(0.2);
+            player.setCollideWorldBounds(true);
+            player.displayWidth = 80;
+            player.displayHeight = 80;
+
+            this.anims.create({
+                key: 'left',
+                frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 6 }),
+                frameRate: 10,
+                repeat: -1
+            });
+
+            this.anims.create({
+                key: 'turn',
+                frames: [{ key: 'dude', frame: 4 }],
+                frameRate: 20
+            });
+
+            this.anims.create({
+                key: 'right',
+                frames: this.anims.generateFrameNumbers('dude', { start: 7, end: 13 }),
+                frameRate: 10,
+                repeat: -1
+            });
+
+            this.physics.add.collider(player, platforms);
+
+            background = this.sound.add('background', { volume: 0.25, rate: 1, loop: true, });
+            background.play();
+        }
+
+        function update() {
+            if (cursors.left.isDown) {
+                player.setVelocityX(-160);
+                meow.play();
+                player.anims.play('left', true);
+            }
+            else if (cursors.right.isDown) {
+                player.setVelocityX(160);
+                meow.play();
+                player.anims.play('right', true);
+            }
+            else {
+                player.setVelocityX(0);
+
+                player.anims.play('turn');
+            }
+
+            if (cursors.up.isDown && player.body.touching.down) {
+                player.setVelocityY(-330);
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>
