@@ -37,6 +37,9 @@ class GameScene extends Phaser.Scene {
 		this.load.image('sky', 'assets/sky3.png');
 		this.load.image('ground', 'assets/platform.png');
 		this.load.image('gift', 'assets/gift.png');
+		this.load.image('gift2', 'assets/gift2.png');
+		this.load.image('gift3', 'assets/gift3.png');
+		this.load.image('gift4', 'assets/gift4.png');
 		this.load.image('bomb', 'assets/bomb.png');
 		this.load.spritesheet('cat', 'assets/Run.png', {
 			frameWidth: 32,
@@ -96,6 +99,12 @@ class GameScene extends Phaser.Scene {
 			setXY: { x: 70, y: 0, stepX: 70 },
 		});
 
+		const textures = ['gift', 'gift2', 'gift3', 'gift4'];
+
+		this.gifts.children.iterate((gift) => {
+			const randomTexture = Phaser.Utils.Array.GetRandom(textures);
+			gift.setTexture(randomTexture);
+		});
 		this.gifts.children.iterate(function (child) {
 			child.setBounceY(Phaser.Math.FloatBetween(0.3, 0.5));
 		});
