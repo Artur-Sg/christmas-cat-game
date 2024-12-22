@@ -5,14 +5,14 @@ class StartScene extends Phaser.Scene {
 
 	preload() {
 		this.load.image('background', 'assets/sky2.png');
-		this.load.image('button', 'assets/gift.png');
+		this.load.image('button', 'assets/task.png');
 	}
 
 	create() {
 		const background = this.add.sprite(0, 0, 'background');
 		background.setOrigin(0, 0);
 
-		const button = this.add.sprite(400, 300, 'button');
+		const button = this.add.sprite(400, 330, 'button');
 		button.setInteractive();
 		button.on('pointerdown', () => {
 			this.scene.start('GameScene');
@@ -28,6 +28,14 @@ class GameScene extends Phaser.Scene {
 	player;
 	cursors;
 	platforms;
+	snowballs;
+	noLuck
+	gameOver = false;
+
+	score = 0;
+	scoreText;
+
+	SCORE_LABEL = 'Cобрано:';
 
 	constructor() {
 		super({ key: 'GameScene' })
@@ -40,7 +48,7 @@ class GameScene extends Phaser.Scene {
 		this.load.image('gift2', 'assets/gift2.png');
 		this.load.image('gift3', 'assets/gift3.png');
 		this.load.image('gift4', 'assets/gift4.png');
-		this.load.image('bomb', 'assets/bomb.png');
+		this.load.image('snowball', 'assets/snowball.png');
 		this.load.spritesheet('cat', 'assets/Run.png', {
 			frameWidth: 32,
 			frameHeight: 32,
@@ -48,6 +56,7 @@ class GameScene extends Phaser.Scene {
 		this.load.audio('meow', 'assets/meow.mp3');
 		this.load.audio('background', 'assets/background.mp3');
 		this.load.audio('pick', 'assets/pick.mp3');
+		this.load.audio('noLuck', 'assets/no-luck.mp3');
 	}
 
 	create() {
@@ -58,14 +67,31 @@ class GameScene extends Phaser.Scene {
 
 		this.platforms.create(400, 610, 'ground').setScale(2).refreshBody();
 
-		this.platforms.create(600, 420, 'ground');
+		this.platforms.create(650, 420, 'ground');
 		this.platforms.create(100, 250, 'ground');
 		this.platforms.create(750, 220, 'ground');
 
+		this.scoreText = this.add.text(
+			65,
+			60,
+			`${this.SCORE_LABEL} ${this.score}`,
+			{
+				fontSize: '32px',
+				fill: '#fff',
+				fontStyle: 'bold',
+				stroke: '#3d2b1f',
+				strokeThickness: 2,
+			},
+		);
+
 		this.player = this.physics.add.sprite(100, 450, 'cat');
+		this.player.setCrop(0, 5, 32, 27);
+		this.player.body.setSize(32, 24);
+		this.player.body.offset.y = 4;
 
 		this.meow = this.sound.add('meow', { volume: 0.5, rate: 1.25 });
 		this.pick = this.sound.add('pick', { volume: 0.5, rate: 1 });
+		this.noLuck = this.sound.add('noLuck', { volume: 0.5, rate: 1.25 });
 
 		this.player.setBounce(0.2);
 		this.player.setCollideWorldBounds(true);
@@ -99,6 +125,8 @@ class GameScene extends Phaser.Scene {
 			setXY: { x: 70, y: 0, stepX: 70 },
 		});
 
+		this.snowballs = this.physics.add.group();
+
 		const textures = ['gift', 'gift2', 'gift3', 'gift4'];
 
 		this.gifts.children.iterate((gift) => {
@@ -111,7 +139,10 @@ class GameScene extends Phaser.Scene {
 
 		this.physics.add.collider(this.gifts, this.platforms);
 		this.physics.add.collider(this.player, this.platforms);
+		this.physics.add.collider(this.snowballs, this.platforms);
+
 		this.physics.add.overlap(this.player, this.gifts, this.collectGift, null, this);
+		this.physics.add.collider(this.player, this.snowballs, this.hitSnowball, null, this);
 
 		this.background = this.sound.add('background', {
 			volume: 0.25,
@@ -122,6 +153,10 @@ class GameScene extends Phaser.Scene {
 	}
 
 	update() {
+		if (this.gameOver) {
+			return;
+		}
+
 		if (this.cursors.left.isDown) {
 			this.player.setVelocityX(-160);
 
@@ -151,8 +186,33 @@ class GameScene extends Phaser.Scene {
 	collectGift(player, gift) {
 		this.pick.play();
 		gift.disableBody(true, true);
+		this.score += Math.floor(Math.random() * 3) + 2;
+		this.scoreText.setText(`${this.SCORE_LABEL} ${this.score}`);
+
+		if (this.gifts.countActive(true) === 0) {
+			this.gifts.children.iterate(function (child) {
+				child.enableBody(true, child.x, 0, true, true);
+			});
+
+			const x = (this.player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+
+			const snowball = this.snowballs.create(x, 16, 'snowball');
+			snowball.setBounce(1);
+			snowball.setScale(0.1, 0.1);
+			snowball.setCollideWorldBounds(true);
+			snowball.setVelocity(Phaser.Math.Between(-100, 100), 20);
+			snowball.allowGravity = false;
+		}
 	}
 
+	hitSnowball(player, snowball) {
+		this.physics.pause();
+
+		this.player.setTint(0xff0000);
+		// this.player.anims.play('turn');
+		this.noLuck.play();
+		this.gameOver = true;
+	}
 }
 
 const config = {
