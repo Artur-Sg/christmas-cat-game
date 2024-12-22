@@ -1,47 +1,12 @@
-class StartScene extends Phaser.Scene {
+class LoadingScene extends Phaser.Scene {
 	constructor() {
-		super({ key: 'StartScene' })
+		super({ key: 'LoadingScene' })
 	}
 
 	preload() {
 		this.load.image('background', 'assets/sky2.png');
 		this.load.image('button', 'assets/task.png');
-	}
-
-	create() {
-		const background = this.add.sprite(0, 0, 'background');
-		background.setOrigin(0, 0);
-
-		const button = this.add.sprite(400, 330, 'button');
-		button.setInteractive();
-		button.on('pointerdown', () => {
-			this.scene.start('GameScene');
-		});
-	}
-}
-
-class GameScene extends Phaser.Scene {
-	meow;
-	pick;
-	gifts;
-	background;
-	player;
-	cursors;
-	platforms;
-	snowballs;
-	noLuck
-	gameOver = false;
-
-	score = 0;
-	scoreText;
-
-	SCORE_LABEL = 'Cобрано:';
-
-	constructor() {
-		super({ key: 'GameScene' })
-	}
-
-	preload() {
+		this.load.image('prize', 'assets/prize.png');
 		this.load.image('sky', 'assets/sky3.png');
 		this.load.image('ground', 'assets/platform.png');
 		this.load.image('gift', 'assets/gift.png');
@@ -57,6 +22,95 @@ class GameScene extends Phaser.Scene {
 		this.load.audio('background', 'assets/background.mp3');
 		this.load.audio('pick', 'assets/pick.mp3');
 		this.load.audio('noLuck', 'assets/no-luck.mp3');
+		this.load.audio('success', 'assets/success.mp3');
+
+		const { width, height } = this.scale;
+
+		this.add.text(width / 2, height / 2 - 70, 'Загрузка...', {
+			fontSize: '32px',
+			fill: '#fff',
+			fontStyle: 'bold',
+			stroke: '#3d2b1f',
+			strokeThickness: 4,
+		}).setOrigin(0.5);
+
+		const progressBox = this.add.graphics();
+		const progressBar = this.add.graphics();
+		progressBox.fillStyle(0xfef65b, 0.8);
+		progressBox.fillRect(width / 2 - 160, height / 2 - 25, 320, 50);
+
+		this.load.on('progress', (value) => {
+			progressBar.clear();
+			progressBar.fillStyle(0xe9190c, 0.7);
+			progressBar.fillRect(width / 2 - 150, height / 2 - 15, 300 * value, 30);
+		});
+
+		this.load.on('filecomplete-image-background', () => {
+			const background = this.add.sprite(0, 0, 'background');
+			background.setOrigin(0, 0).setDepth(-1);
+		});
+
+		this.load.on('complete', () => {
+			progressBar.destroy();
+			progressBox.destroy();
+			this.scene.start('StartScene');
+		});
+	}
+}
+
+class StartScene extends Phaser.Scene {
+	constructor() {
+		super({ key: 'StartScene' })
+	}
+
+	create() {
+		const background = this.add.sprite(0, 0, 'background');
+		background.setOrigin(0, 0);
+
+		const button = this.add.sprite(400, 330, 'button');
+		button.setInteractive();
+		button.on('pointerdown', () => {
+			this.scene.start('GameScene');
+		});
+	}
+}
+
+class PrizeScene extends Phaser.Scene {
+	constructor() {
+		super({ key: 'PrizeScene' })
+	}
+
+	create() {
+		const background = this.add.sprite(0, 0, 'background');
+		background.setOrigin(0, 0);
+
+		this.add.sprite(400, 330, 'prize');
+	}
+}
+
+class GameScene extends Phaser.Scene {
+	meow;
+	pick;
+	gifts;
+	background;
+	player;
+	cursors;
+	platforms;
+	snowballs;
+	noLuck
+	success
+	gameOver = false;
+
+	score = 0;
+	scoreText;
+
+	SCORE_LABEL = 'Cобрано:';
+
+	constructor() {
+		super({ key: 'GameScene' })
+	}
+
+	preload() {
 	}
 
 	create() {
@@ -92,6 +146,7 @@ class GameScene extends Phaser.Scene {
 		this.meow = this.sound.add('meow', { volume: 0.5, rate: 1.25 });
 		this.pick = this.sound.add('pick', { volume: 0.5, rate: 1 });
 		this.noLuck = this.sound.add('noLuck', { volume: 0.5, rate: 1.25 });
+		this.success = this.sound.add('success', { volume: 0.5, rate: 1 });
 
 		this.player.setBounce(0.2);
 		this.player.setCollideWorldBounds(true);
@@ -189,6 +244,11 @@ class GameScene extends Phaser.Scene {
 		this.score += Math.floor(Math.random() * 3) + 2;
 		this.scoreText.setText(`${this.SCORE_LABEL} ${this.score}`);
 
+		if (this.score >= 100) {
+			this.success.play();
+			this.scene.start('PrizeScene');
+		}
+
 		if (this.gifts.countActive(true) === 0) {
 			this.gifts.children.iterate(function (child) {
 				child.enableBody(true, child.x, 0, true, true);
@@ -219,6 +279,7 @@ const config = {
 	type: Phaser.AUTO,
 	width: 800,
 	height: 650,
+	backgroundColor: '#1f70c4',
 	physics: {
 		default: 'arcade',
 		arcade: {
@@ -226,7 +287,7 @@ const config = {
 			debug: false,
 		},
 	},
-	scene: [StartScene, GameScene],
+	scene: [LoadingScene, StartScene, GameScene, PrizeScene],
 };
 
 const game = new Phaser.Game(config);
