@@ -6,6 +6,7 @@ class LoadingScene extends Phaser.Scene {
 	preload() {
 		this.load.image('background', 'assets/sky2.png');
 		this.load.image('button', 'assets/task.png');
+		this.load.image('paper-failure', 'assets/paper-failure.png');
 		this.load.image('prize', 'assets/prize.png');
 		this.load.image('sky', 'assets/sky3.png');
 		this.load.image('ground', 'assets/platform.png');
@@ -56,6 +57,36 @@ class LoadingScene extends Phaser.Scene {
 			this.scene.start('StartScene');
 		});
 	}
+
+	create() {
+		background = this.sound.add('background', {
+			volume: 0.25,
+			rate: 1,
+			loop: true,
+		});
+
+		background.play();
+
+		this.anims.create({
+			key: 'left',
+			frames: this.anims.generateFrameNumbers('cat', { start: 0, end: 6 }),
+			frameRate: 10,
+			repeat: -1,
+		});
+
+		this.anims.create({
+			key: 'turn',
+			frames: [{ key: 'cat', frame: 4 }],
+			frameRate: 20,
+		});
+
+		this.anims.create({
+			key: 'right',
+			frames: this.anims.generateFrameNumbers('cat', { start: 7, end: 13 }),
+			frameRate: 10,
+			repeat: -1,
+		});
+	}
 }
 
 class StartScene extends Phaser.Scene {
@@ -85,6 +116,56 @@ class PrizeScene extends Phaser.Scene {
 		background.setOrigin(0, 0);
 
 		this.add.sprite(400, 330, 'prize');
+	}
+}
+
+class FailureScene extends Phaser.Scene {
+	constructor() {
+		super({ key: 'FailureScene' })
+	}
+
+	create() {
+		const { width, height } = this.scale;
+
+		const background = this.add.sprite(0, 0, 'background');
+		background.setOrigin(0, 0);
+
+		const failure = this.add.sprite(400, 330, 'paper-failure');
+
+		if (tries >= 5) {
+			const prizeButton = this.add.text(width / 2, height / 2 + 100, 'МЫ УСТАЛИ И ХОТИМ ПРИЗ!', {
+				fontSize: '32px',
+				fill: '#55332C',
+				fontStyle: 'bold',
+				stroke: '#fff',
+				strokeThickness: 2,
+			})
+				.setOrigin(0.5)
+				.setInteractive();
+
+			prizeButton.on('pointerdown', () => {
+				this.scene.stop('FailureScene');
+				const gameScene = this.scene.get('GameScene');
+				gameScene.goToPrize();
+			});
+		}
+
+		const restartButton = this.add.text(width / 2, height / 2 + 50, 'ДА!', {
+			fontSize: '32px',
+			fill: '#55332C',
+			fontStyle: 'bold',
+			stroke: '#fff',
+			strokeThickness: 2,
+		})
+			.setOrigin(0.5)
+			.setInteractive();
+
+		restartButton.on('pointerdown', () => {
+			const gameScene = this.scene.get('GameScene');
+			gameScene.restartGame();
+			this.scene.stop();
+			this.scene.start('GameScene');
+		});
 	}
 }
 
@@ -153,26 +234,6 @@ class GameScene extends Phaser.Scene {
 		this.player.displayWidth = 90;
 		this.player.displayHeight = 90;
 
-		this.anims.create({
-			key: 'left',
-			frames: this.anims.generateFrameNumbers('cat', { start: 0, end: 6 }),
-			frameRate: 10,
-			repeat: -1,
-		});
-
-		this.anims.create({
-			key: 'turn',
-			frames: [{ key: 'cat', frame: 4 }],
-			frameRate: 20,
-		});
-
-		this.anims.create({
-			key: 'right',
-			frames: this.anims.generateFrameNumbers('cat', { start: 7, end: 13 }),
-			frameRate: 10,
-			repeat: -1,
-		});
-
 		this.gifts = this.physics.add.group({
 			key: 'gift',
 			repeat: 9,
@@ -198,13 +259,6 @@ class GameScene extends Phaser.Scene {
 
 		this.physics.add.overlap(this.player, this.gifts, this.collectGift, null, this);
 		this.physics.add.collider(this.player, this.snowballs, this.hitSnowball, null, this);
-
-		this.background = this.sound.add('background', {
-			volume: 0.25,
-			rate: 1,
-			loop: true,
-		});
-		this.background.play();
 	}
 
 	update() {
@@ -245,8 +299,7 @@ class GameScene extends Phaser.Scene {
 		this.scoreText.setText(`${this.SCORE_LABEL} ${this.score}`);
 
 		if (this.score >= 100) {
-			this.success.play();
-			this.scene.start('PrizeScene');
+			this.goToPrize();
 		}
 
 		if (this.gifts.countActive(true) === 0) {
@@ -272,6 +325,20 @@ class GameScene extends Phaser.Scene {
 		// this.player.anims.play('turn');
 		this.noLuck.play();
 		this.gameOver = true;
+
+		this.scene.start('FailureScene');
+	}
+
+	restartGame() {
+		this.score = 0;
+		this.scene.restart();
+		tries += 1;
+		this.gameOver = false;
+	}
+
+	goToPrize() {
+		this.success.play();
+		this.scene.start('PrizeScene');
 	}
 }
 
@@ -287,7 +354,10 @@ const config = {
 			debug: false,
 		},
 	},
-	scene: [LoadingScene, StartScene, GameScene, PrizeScene],
+	scene: [LoadingScene, StartScene, GameScene, PrizeScene, FailureScene],
 };
+
+let tries = 0;
+let background;
 
 const game = new Phaser.Game(config);
