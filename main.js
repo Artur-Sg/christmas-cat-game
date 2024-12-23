@@ -10,12 +10,14 @@ class LoadingScene extends Phaser.Scene {
 		this.load.image('prize', 'assets/prize.png');
 		this.load.image('sky', 'assets/sky3.png');
 		this.load.image('ground', 'assets/platform.png');
+		this.load.image('floor', 'assets/floor.png');
+		this.load.image('branch', 'assets/branch.png');
 		this.load.image('gift', 'assets/gift.png');
 		this.load.image('gift2', 'assets/gift2.png');
 		this.load.image('gift3', 'assets/gift3.png');
 		this.load.image('gift4', 'assets/gift4.png');
 		this.load.image('snowball', 'assets/snowball.png');
-		this.load.spritesheet('cat', 'assets/Run.png', {
+		this.load.spritesheet('cat', 'assets/run.png', {
 			frameWidth: 32,
 			frameHeight: 32,
 		});
@@ -199,12 +201,7 @@ class GameScene extends Phaser.Scene {
 
 		this.cursors = this.input.keyboard.createCursorKeys();
 		this.platforms = this.physics.add.staticGroup();
-
-		this.platforms.create(400, 610, 'ground').setScale(2).refreshBody();
-
-		this.platforms.create(650, 420, 'ground');
-		this.platforms.create(100, 250, 'ground');
-		this.platforms.create(750, 220, 'ground');
+		this.createPlatforms();
 
 		this.scoreText = this.add.text(
 			65,
@@ -231,8 +228,8 @@ class GameScene extends Phaser.Scene {
 
 		this.player.setBounce(0.2);
 		this.player.setCollideWorldBounds(true);
-		this.player.displayWidth = 90;
-		this.player.displayHeight = 90;
+		this.player.displayWidth = 75;
+		this.player.displayHeight = 75;
 
 		this.gifts = this.physics.add.group({
 			key: 'gift',
@@ -249,8 +246,10 @@ class GameScene extends Phaser.Scene {
 			const randomTexture = Phaser.Utils.Array.GetRandom(textures);
 			gift.setTexture(randomTexture);
 		});
-		this.gifts.children.iterate(function (child) {
+
+		this.gifts.children.iterate((child) => {
 			child.setBounceY(Phaser.Math.FloatBetween(0.3, 0.5));
+			child.setOffset(0, -150);
 		});
 
 		this.physics.add.collider(this.gifts, this.platforms);
@@ -307,14 +306,42 @@ class GameScene extends Phaser.Scene {
 				child.enableBody(true, child.x, 0, true, true);
 			});
 
-			const x = (this.player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+			const SCREEN_WIDTH = 800;
+			const SNOWBALL_SCALE = 0.1;
+			const SNOWBALL_BOUNCE = 1;
 
-			const snowball = this.snowballs.create(x, 16, 'snowball');
-			snowball.setBounce(1);
-			snowball.setScale(0.1, 0.1);
-			snowball.setCollideWorldBounds(true);
-			snowball.setVelocity(Phaser.Math.Between(-100, 100), 20);
-			snowball.allowGravity = false;
+			function getSpawnPosition(playerX, screenWidth) {
+				const halfWidth = screenWidth / 2;
+
+				return (playerX < halfWidth)
+					? Phaser.Math.Between(halfWidth, screenWidth)
+					: Phaser.Math.Between(0, halfWidth);
+			}
+
+			function createSnowball(group, x, y) {
+				const snowball = group.create(x, y, 'snowball');
+				snowball.setOffset(0, -150);
+				snowball.setBounce(SNOWBALL_BOUNCE);
+				snowball.setScale(SNOWBALL_SCALE);
+				snowball.setCollideWorldBounds(true);
+
+				const minVelocity = -150;
+				const maxVelocity = 150;
+				const exclusionRange = { min: -20, max: 20 };
+
+				let velocityX;
+				do {
+					velocityX = Phaser.Math.Between(minVelocity, maxVelocity);
+				} while (velocityX > exclusionRange.min && velocityX < exclusionRange.max);
+
+				snowball.setVelocity(velocityX, 20);
+				snowball.allowGravity = false;
+
+				return snowball;
+			}
+
+			const x = getSpawnPosition(this.player.x, SCREEN_WIDTH);
+			createSnowball(this.snowballs, x, 16);
 		}
 	}
 
@@ -340,6 +367,24 @@ class GameScene extends Phaser.Scene {
 		this.success.play();
 		this.scene.start('PrizeScene');
 	}
+
+	createPlatforms() {
+		const platformConfigs = [
+			{ x: 400, y: 610, key: 'floor', scale: 1, bodySize: { width: null, height: null }, offset: { x: 0, y: 25 } }, // Floor
+			{ x: 590, y: 420, key: 'branch', scale: 0.5, bodySize: { width: null, height: 10 }, offset: { x: 0, y: 25 } }, // Right-bottom
+			{ x: 100, y: 250, key: 'branch', scale: 0.5, bodySize: { width: null, height: 10 }, offset: { x: 0, y: 25 } }, // Left-top
+			{ x: 700, y: 220, key: 'branch', scale: 0.5, bodySize: { width: null, height: 10 }, offset: { x: 0, y: 25 } }, // Right-top
+		];
+
+		this.platforms = this.physics.add.staticGroup();
+
+		platformConfigs.forEach(({ x, y, key, scale, bodySize, offset }) => {
+			const platform = this.platforms.create(x, y, key).setScale(scale).refreshBody();
+
+			platform.body.setSize(platform.displayWidth, bodySize.height);
+			platform.body.setOffset(offset.x, offset.y);
+		});
+	}
 }
 
 const config = {
@@ -357,7 +402,7 @@ const config = {
 	scene: [LoadingScene, StartScene, GameScene, PrizeScene, FailureScene],
 };
 
-let tries = 0;
+let tries = 1;
 let background;
 
 const game = new Phaser.Game(config);
