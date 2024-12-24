@@ -197,7 +197,7 @@ class GameScene extends Phaser.Scene {
 	}
 
 	create() {
-		this.add.image(400, 270, 'sky').setScale(0.75);
+		this.add.image(400, 350, 'sky').setScale(0.75);
 
 		this.cursors = this.input.keyboard.createCursorKeys();
 		this.platforms = this.physics.add.staticGroup();
