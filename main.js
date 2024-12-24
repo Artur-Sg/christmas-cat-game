@@ -187,7 +187,7 @@ class GameScene extends Phaser.Scene {
 	score = 0;
 	scoreText;
 
-	SCORE_LABEL = 'Cобрано:';
+	SCORE_LABEL = 'Собрано:';
 
 	constructor() {
 		super({ key: 'GameScene' })
@@ -205,7 +205,7 @@ class GameScene extends Phaser.Scene {
 
 		this.scoreText = this.add.text(
 			65,
-			60,
+			100,
 			`${this.SCORE_LABEL} ${this.score}`,
 			{
 				fontSize: '32px',
